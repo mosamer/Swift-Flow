@@ -19,7 +19,7 @@ class StoreSpecs: QuickSpec {
 
         describe("#subscribe") {
 
-            var store: MainStore!
+            var store: MainStore<TestAppState>!
             var reducer: TestReducer!
 
             beforeEach {
@@ -43,7 +43,7 @@ class StoreSpecs: QuickSpec {
 
                 store.dispatch(SetValueAction(2))
 
-                expect((store.appState as? TestAppState)?.testValue).to(equal(5))
+                expect(store.state.testValue).to(equal(5))
             }
 
             it("does not dispatch value after subscriber unsubscribes") {
@@ -92,7 +92,7 @@ class StoreSpecs: QuickSpec {
 
         describe("#dispatch") {
 
-            var store: Store!
+            var store: MainStore<TestAppState>!
             var reducer: TestReducer!
 
             beforeEach {
@@ -126,7 +126,7 @@ class StoreSpecs: QuickSpec {
 
                 store.dispatch(doubleStateValueActionCreator)
 
-                expect((store.appState as? TestAppState)?.testValue).to(equal(10))
+                expect(store.state.testValue).to(equal(10))
             }
 
             it("accepts async action creators") {
@@ -141,7 +141,7 @@ class StoreSpecs: QuickSpec {
 
                 store.dispatch(asyncActionCreator)
 
-                expect((store.appState as? TestAppState)?.testValue).toEventually(equal(5))
+                expect(store.state.testValue).toEventually(equal(5))
             }
 
             it("calls the callback once state update from async action is complete") {

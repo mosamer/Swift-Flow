@@ -24,7 +24,7 @@ public protocol Store {
     init(reducer: AnyReducer, appState: StateType, middleware: [Middleware])
 
     /// The current state stored in the store.
-    var appState: StateType { get }
+    var anyState: StateType { get }
 
     /**
      The main dispatch function that is used by all convenience `dispatch` methods.

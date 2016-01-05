@@ -15,14 +15,16 @@ import Foundation
  reducers you can combine them by initializng a `MainReducer` with all of your reducers as an
  argument.
  */
-public class MainStore: Store {
+public class MainStore<T: StateType>: Store {
 
-    // TODO: Setter should not be public; need way for store enhancers to modify appState anyway
-
-    /*private (set)*/ public var appState: StateType {
+    public var anyState: StateType {
         didSet {
-            subscribers.forEach { $0._newState(appState) }
+            subscribers.forEach { $0._newState(anyState) }
         }
+    }
+
+    public var state: T {
+        return anyState as! T
     }
 
     public var dispatchFunction: DispatchFunction!
@@ -37,12 +39,12 @@ public class MainStore: Store {
 
     public required init(reducer: AnyReducer, appState: StateType, middleware: [Middleware]) {
         self.reducer = reducer
-        self.appState = appState
+        self.anyState = appState
 
         // Wrap the dispatch function with all middlewares
         self.dispatchFunction = middleware.reverse().reduce(self._defaultDispatch) {
             dispatchFunction, middleware in
-                return middleware(self.dispatch, { self.appState })(dispatchFunction)
+                return middleware(self.dispatch, { self.anyState })(dispatchFunction)
         }
     }
 
@@ -53,7 +55,7 @@ public class MainStore: Store {
         }
 
         subscribers.append(subscriber)
-        subscriber._newState(appState)
+        subscriber._newState(anyState)
     }
 
     public func unsubscribe(subscriber: AnyStoreSubscriber) {
@@ -72,10 +74,10 @@ public class MainStore: Store {
         }
 
         isDispatching = true
-        let newState = self.reducer._handleAction(self.appState, action: action)
+        let newState = self.reducer._handleAction(self.anyState, action: action)
         isDispatching = false
 
-        self.appState = newState
+        self.anyState = newState
 
         return action
     }
@@ -94,13 +96,13 @@ public class MainStore: Store {
 
     public func dispatch(action: Action, callback: DispatchCallback?) -> Any {
         let returnValue = self.dispatchFunction(action)
-        callback?(self.appState)
+        callback?(self.anyState)
 
         return returnValue
     }
 
     public func dispatch(actionCreatorProvider: ActionCreator, callback: DispatchCallback?) -> Any {
-        let action = actionCreatorProvider(state: self.appState, store: self)
+        let action = actionCreatorProvider(state: self.anyState, store: self)
         if let action = action {
             dispatch(action, callback: callback)
         }
@@ -109,8 +111,8 @@ public class MainStore: Store {
     }
 
     public func dispatch(actionCreatorProvider: AsyncActionCreator, callback: DispatchCallback?) {
-        actionCreatorProvider(state: self.appState, store: self) { actionProvider in
-            let action = actionProvider(state: self.appState, store: self)
+        actionCreatorProvider(state: self.anyState, store: self) { actionProvider in
+            let action = actionProvider(state: self.anyState, store: self)
             if let action = action {
                 self.dispatch(action, callback: callback)
             }
