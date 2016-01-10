@@ -15,16 +15,12 @@ import Foundation
  reducers you can combine them by initializng a `MainReducer` with all of your reducers as an
  argument.
  */
-public class MainStore<T: StateType>: Store {
+public class MainStore<State: StateType>: Store {
 
-    public var anyState: StateType {
+    public var state: State {
         didSet {
-            subscribers.forEach { $0._newState(anyState) }
+            subscribers.forEach { $0._newState(state) }
         }
-    }
-
-    public var state: T {
-        return anyState as! T
     }
 
     public var dispatchFunction: DispatchFunction!
@@ -33,18 +29,18 @@ public class MainStore<T: StateType>: Store {
     var subscribers: [AnyStoreSubscriber] = []
     private var isDispatching = false
 
-    public required convenience init(reducer: AnyReducer, appState: StateType) {
-        self.init(reducer: reducer, appState: appState, middleware: [])
+    public required convenience init(reducer: AnyReducer, state: State) {
+        self.init(reducer: reducer, state: state, middleware: [])
     }
 
-    public required init(reducer: AnyReducer, appState: StateType, middleware: [Middleware]) {
+    public required init(reducer: AnyReducer, state: State, middleware: [Middleware]) {
         self.reducer = reducer
-        self.anyState = appState
+        self.state = state
 
         // Wrap the dispatch function with all middlewares
         self.dispatchFunction = middleware.reverse().reduce(self._defaultDispatch) {
             dispatchFunction, middleware in
-                return middleware(self.dispatch, { self.anyState })(dispatchFunction)
+                return middleware(self.dispatch, { self.state })(dispatchFunction)
         }
     }
 
@@ -55,7 +51,7 @@ public class MainStore<T: StateType>: Store {
         }
 
         subscribers.append(subscriber)
-        subscriber._newState(anyState)
+        subscriber._newState(state)
     }
 
     public func unsubscribe(subscriber: AnyStoreSubscriber) {
@@ -74,10 +70,10 @@ public class MainStore<T: StateType>: Store {
         }
 
         isDispatching = true
-        let newState = self.reducer._handleAction(self.anyState, action: action)
+        let newState = self.reducer._handleAction(self.state, action: action)
         isDispatching = false
 
-        self.anyState = newState
+        self.state = newState as! State
 
         return action
     }
@@ -96,13 +92,13 @@ public class MainStore<T: StateType>: Store {
 
     public func dispatch(action: Action, callback: DispatchCallback?) -> Any {
         let returnValue = self.dispatchFunction(action)
-        callback?(self.anyState)
+        callback?(self.state)
 
         return returnValue
     }
 
     public func dispatch(actionCreatorProvider: ActionCreator, callback: DispatchCallback?) -> Any {
-        let action = actionCreatorProvider(state: self.anyState, store: self)
+        let action = actionCreatorProvider(state: self.state, store: self)
         if let action = action {
             dispatch(action, callback: callback)
         }
@@ -111,8 +107,8 @@ public class MainStore<T: StateType>: Store {
     }
 
     public func dispatch(actionCreatorProvider: AsyncActionCreator, callback: DispatchCallback?) {
-        actionCreatorProvider(state: self.anyState, store: self) { actionProvider in
-            let action = actionProvider(state: self.anyState, store: self)
+        actionCreatorProvider(state: self.state, store: self) { actionProvider in
+            let action = actionProvider(state: self.state, store: self)
             if let action = action {
                 self.dispatch(action, callback: callback)
             }
